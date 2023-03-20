@@ -1,0 +1,75 @@
+import cv2 as cv
+import numpy as np
+import imutils
+import matplotlib.pyplot as plt
+
+#resize function 
+def resize (img, scale = 0.4):
+    dimensions = [int(img.shape[1] * scale), int(img.shape[0] * scale)]
+    
+    return cv.resize(img, dimensions, interpolation=cv.INTER_AREA)
+
+#get board from file location
+board = resize(cv.imread('BoardImages/Custom Board.jpeg'), 0.7)
+cv.imshow('og board', board)
+
+#grayscale
+gray = cv.cvtColor(board, cv.COLOR_BGR2GRAY)
+#cv.imshow('gray board', gray)
+
+#gaussian blur
+blur = cv.GaussianBlur(gray, (3, 3), 0)
+#cv.imshow('gaussian blurred board', blur)
+
+#edge detection
+canny = cv.Canny(gray, 100, 200)
+cv.imshow('board edges', canny)
+
+#contour board copy
+conBoard = board.copy()
+
+#finding contours
+contours, hierarchy = cv.findContours(canny, cv.RETR_TREE, cv.CHAIN_APPROX_SIMPLE)
+cv.drawContours(conBoard, contours, -1, (0,255,0), 3)
+cv.imshow('contour board', conBoard)
+
+cv.waitKey(0)
+
+#board rectangles
+recBoard = board.copy()
+
+
+#finding rectangles
+rectangles = []
+recCounter = 0
+for i in contours:
+        epsilon = 0.02*cv.arcLength(i,True)
+        approx = cv.approxPolyDP(i,epsilon,True)
+        
+        if len(approx) == 4:
+            
+            rectangles.append(approx)
+
+print(len(rectangles))
+
+#drawing rectangles
+cv.drawContours(recBoard, rectangles, -1, (0,255,0), 3)
+cv.imshow('rectangles board', recBoard)
+
+#finding potential board rectangles
+screenArea = board.shape[1] * board.shape[0]
+boardRecs = [rec for rec in rectangles if cv.contourArea(rec) > 0.1 * screenArea]
+
+#contour areas
+contourAreas = [cv.contourArea(rec) for rec in boardRecs]
+
+#finding correct board rectangle
+boardRec = boardRecs[contourAreas.index(min(contourAreas))]
+
+#draw correct board on image
+cv.drawContours(board,[boardRec],-1,(0,255,0),3)
+cv.imshow('board rectangle', board)
+
+
+
+cv.waitKey(0)
